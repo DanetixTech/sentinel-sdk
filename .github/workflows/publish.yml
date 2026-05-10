@@ -1,0 +1,75 @@
+name: Publish to npm
+
+# Trigger: push тега `v*` из private DanetixTech/sentinel mirror
+# workflow. Этот репо содержит только готовые dist/* + package.json
+# + README + LICENSE — сборка происходит вверх по цепочке.
+#
+# Auth — npm Trusted Publisher через GitHub OIDC. На npmjs.com в
+# Settings пакета @danetix/sentinel прописан этот workflow:
+#   Owner: DanetixTech
+#   Repo:  sentinel-sdk
+#   File:  .github/workflows/publish.yml
+#
+# Provenance работает потому что этот repo Public — npm проверяет
+# источник через Sigstore и публикует "Verified" badge.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # id-token: write нужен для Trusted Publisher OIDC + provenance.
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          echo "Tag: v${TAG_VERSION}"
+          echo "Package: ${PKG_VERSION}"
+          if [ "${TAG_VERSION}" != "${PKG_VERSION}" ]; then
+            echo "::error::Tag v${TAG_VERSION} ≠ package.json ${PKG_VERSION}"
+            exit 1
+          fi
+
+      - name: Verify required files
+        run: |
+          for f in \
+            dist/stl.cjs.min.js \
+            dist/stl.esm.min.js \
+            dist/stl.min.js \
+            dist/stl.umd.min.js \
+            package.json \
+            LICENSE \
+            README.md
+          do
+            if [ ! -s "$f" ]; then
+              echo "::error::Missing or empty: $f"
+              exit 1
+            fi
+          done
+          echo "Payload OK:"
+          ls -lh dist/
+          ls -lh package.json LICENSE README.md
+
+      - name: Publish to npm with provenance
+        # --access public — scoped @danetix/* по умолчанию private,
+        #   явный public нужен для бесплатной публикации.
+        # --provenance — Sigstore-подписанная attestation, поддерживается
+        #   потому что repo Public.
+        run: npm publish --access public --provenance
