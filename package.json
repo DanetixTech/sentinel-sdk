@@ -23,5 +23,13 @@
     "danetix",
     "device intelligence",
     "analytics"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanetixTech/sentinel-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DanetixTech/sentinel-sdk/issues"
+  },
+  "homepage": "https://github.com/DanetixTech/sentinel-sdk#readme"
 }
