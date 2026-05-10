@@ -72,4 +72,8 @@ jobs:
         #   явный public нужен для бесплатной публикации.
         # --provenance — Sigstore-подписанная attestation, поддерживается
         #   потому что repo Public.
-        run: npm publish --access public --provenance
+        # --ignore-scripts — defense-in-depth: mirror содержит только
+        #   готовый dist/, никакие prepublishOnly/postinstall не должны
+        #   запускаться (private workflow патчит scripts из package.json,
+        #   но если что-то проскочит — npm не упадёт с rollup not found).
+        run: npm publish --access public --provenance --ignore-scripts
