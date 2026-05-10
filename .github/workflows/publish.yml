@@ -33,8 +33,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # Node 24 LTS поставляется с npm 11+; OIDC trusted publishing
+          # требует npm >= 11.5.1 (см. docs.npmjs.com/trusted-publishers).
+          # Если node-version: '22', bundled npm 10.9.x возвращает 404
+          # на любом publish-PUT для scoped packages через OIDC.
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Ensure npm 11.5.1+ (required for OIDC trusted publishing)
+        # Defense-in-depth: даже если Node 24 уже ставит npm 11.x,
+        # явный upgrade гарантирует latest npm CLI с обновлёнными
+        # OIDC token-exchange routines.
+        run: |
+          npm install -g npm@latest
+          echo "npm version: $(npm --version)"
+          echo "node version: $(node --version)"
 
       - name: Verify tag matches package.json version
         run: |
